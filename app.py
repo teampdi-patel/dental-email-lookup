@@ -14,7 +14,7 @@ app = Flask(__name__, static_folder='.')
 CORS(app, origins=["*"])  # <-- ADD THIS (allows all domains for testing)
 
 # Google Places API Key (hardcoded — safe for now)
-GOOGLE_API_KEY = "AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps"
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
 # Get SendGrid API key from environment variable — NEVER hardcode it!
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
@@ -174,3 +174,4 @@ def send_email():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)  # <-- ADD THIS (production mode)
+
