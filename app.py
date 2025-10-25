@@ -1,4 +1,4 @@
-# v2.0 - Multi-scraper Email Finder with BeautifulSoup, Playwright, Pyppeteer, Selenium, Scrapy
+# v2.0 - Multi-scraper Email Finder with BeautifulSoup, Playwright, Selenium, Scrapy
 import os
 import sys
 import re
@@ -89,33 +89,6 @@ def find_email_via_playwright(website):
                 return emails[0]
     except Exception as e:
         print(f"[Playwright] Error: {str(e)}", file=sys.stderr)
-    
-    return None
-
-def find_email_via_pyppeteer(website):
-    """Try to find email using Pyppeteer (Node.js-based)"""
-    try:
-        print(f"[Pyppeteer] Attempting to render: {website}", file=sys.stderr)
-        import asyncio
-        from pyppeteer import launch
-        
-        async def scrape():
-            browser = await launch()
-            page = await browser.newPage()
-            await page.goto(website, {'waitUntil': 'networkidle2', 'timeout': 15000})
-            content = await page.content()
-            await browser.close()
-            return content
-        
-        loop = asyncio.new_event_loop()
-        content = loop.run_until_complete(scrape())
-        
-        emails = extract_emails_from_text(content)
-        if emails:
-            print(f"[Pyppeteer] Found email: {emails[0]}", file=sys.stderr)
-            return emails[0]
-    except Exception as e:
-        print(f"[Pyppeteer] Error: {str(e)}", file=sys.stderr)
     
     return None
 
@@ -323,19 +296,15 @@ def find_email():
             if not email:
                 email = find_email_via_playwright(website)
             
-            # 3. Pyppeteer (Node.js alternative)
-            if not email:
-                email = find_email_via_pyppeteer(website)
-            
-            # 4. Selenium (Browser automation)
+            # 3. Selenium (Browser automation)
             if not email:
                 email = find_email_via_selenium(website)
             
-            # 5. Scrapy (Framework approach)
+            # 4. Scrapy (Framework approach)
             if not email:
                 email = find_email_via_scrapy(website)
             
-            # 6. Regex (Final fallback on website)
+            # 5. Regex (Final fallback on website)
             if not email:
                 email = find_email_via_regex(website)
         
