@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -10,6 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__, static_folder='.')
+CORS(app, origins=["*"])
 
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
@@ -164,3 +166,4 @@ def send_email():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
