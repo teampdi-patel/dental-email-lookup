@@ -1,42 +1,4 @@
-def find_email_via_database(office_name):
-    """Try to find email from Alamance County database using fuzzy matching"""
-    try:
-        office_name_lower = office_name.lower().strip()
-        print(f"Searching database for: {office_name_lower}", file=sys.stderr)
-        
-        # Exact match first
-        if office_name_lower in ALAMANCE_EMAILS_DB:
-            email = ALAMANCE_EMAILS_DB[office_name_lower][0]
-            print(f"Found email in database (exact match): {email}", file=sys.stderr)
-            return email
-        
-        # Fuzzy match - find the closest match
-        best_match = None
-        best_score = 0
-        threshold = 0.6  # Require at least 60% similarity
-        
-        for db_office in ALAMANCE_EMAILS_DB.keys():
-            # Calculate similarity ratio (0 to 1)
-            ratio = SequenceMatcher(None, office_name_lower, db_office).ratio()
-            
-            if ratio > best_score:
-                best_score = ratio
-                best_match = db_office
-        
-        # If we found a good match (>60% similar), use it
-        if best_match and best_score >= threshold:
-            email = ALAMANCE_EMAILS_DB[best_match][0]
-            print(f"Found email in database (fuzzy match '{best_match}' with {best_score*100:.0f}% similarity): {email}", file=sys.stderr)
-            return email
-        else:
-            print(f"No database match found. Best match was '{best_match}' with {best_score*100:.0f}% similarity (threshold: {threshold*100:.0f}%)", file=sys.stderr)
-            
-    except Exception as e:
-        print(f"Database lookup error: {str(e)}", file=sys.stderr)
-    
-    return None
-
-def find_email_via_website(website):import os
+import os
 import sys
 import re
 import time
@@ -78,6 +40,42 @@ except Exception as e:
 def index():
     return send_from_directory('.', 'index.html')
 
+def find_email_via_database(office_name):
+    """Try to find email from Alamance County database using fuzzy matching"""
+    try:
+        office_name_lower = office_name.lower().strip()
+        print(f"Searching database for: {office_name_lower}", file=sys.stderr)
+        
+        # Exact match first
+        if office_name_lower in ALAMANCE_EMAILS_DB:
+            email = ALAMANCE_EMAILS_DB[office_name_lower][0]
+            print(f"Found email in database (exact match): {email}", file=sys.stderr)
+            return email
+        
+        # Fuzzy match - find the closest match
+        best_match = None
+        best_score = 0
+        threshold = 0.6
+        
+        for db_office in ALAMANCE_EMAILS_DB.keys():
+            ratio = SequenceMatcher(None, office_name_lower, db_office).ratio()
+            
+            if ratio > best_score:
+                best_score = ratio
+                best_match = db_office
+        
+        if best_match and best_score >= threshold:
+            email = ALAMANCE_EMAILS_DB[best_match][0]
+            print(f"Found email in database (fuzzy match '{best_match}' with {best_score*100:.0f}% similarity): {email}", file=sys.stderr)
+            return email
+        else:
+            print(f"No database match found. Best match was '{best_match}' with {best_score*100:.0f}% similarity (threshold: {threshold*100:.0f}%)", file=sys.stderr)
+            
+    except Exception as e:
+        print(f"Database lookup error: {str(e)}", file=sys.stderr)
+    
+    return None
+
 def find_email_via_google_search(office_name, location):
     """Try to find email using Google Custom Search API"""
     if not GOOGLE_SEARCH_ENGINE_ID:
@@ -100,17 +98,14 @@ def find_email_via_google_search(office_name, location):
             print("No search results found", file=sys.stderr)
             return None
         
-        # Search through results for email addresses
         for item in results.get('items', []):
             snippet = item.get('snippet', '')
             title = item.get('title', '')
             
-            # Look for email pattern in snippet and title
             email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
             emails = re.findall(email_pattern, snippet + ' ' + title)
             
             if emails:
-                # Filter out common non-office emails
                 skip_domains = ['google.com', 'facebook.com', 'yelp.com', 'healthgrades.com', 'gmail.com', 'yahoo.com']
                 valid_emails = [e for e in emails if not any(domain in e.lower() for domain in skip_domains)]
                 
@@ -125,6 +120,8 @@ def find_email_via_google_search(office_name, location):
         print(f"Google Search error: {str(e)}", file=sys.stderr)
     
     return None
+
+def find_email_via_hunter(domain, office_name):
     """Try to find email using Hunter.io API"""
     if not HUNTER_API_KEY:
         return None
@@ -149,7 +146,7 @@ def find_email_via_google_search(office_name, location):
     
     return None
 
-def find_email_via_database(office_name):
+def find_email_via_website(website):
     """Try to scrape email from website"""
     try:
         print(f"Attempting to scrape website: {website}", file=sys.stderr)
@@ -264,7 +261,6 @@ def find_email():
         # Try Hunter.io if still not found
         if not email and website:
             try:
-                # Extract domain from website URL
                 domain = website.replace('http://', '').replace('https://', '').split('/')[0]
                 email = find_email_via_hunter(domain, office_name_found)
             except Exception as e:
@@ -274,9 +270,9 @@ def find_email():
         if not email:
             email = find_email_via_hunter(office_name_found.replace(' ', ''), office_name_found)
         
-        # Last resort: generate email from office name
+        # Last resort: return null
         if not email:
-            print(f"No email found, generating fallback", file=sys.stderr)
+            print(f"No email found, returning null", file=sys.stderr)
             email = None
         
         return jsonify({
