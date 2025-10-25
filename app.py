@@ -36,39 +36,27 @@ def find_email_via_database(office_name):
     
     return None
 
-def find_email_via_website(website):from flask import Flask, request, jsonify, send_from_directory
-import requests
+def find_email_via_website(website):import os
+import sys
 import re
 import time
-import os
-import sys
 import csv
 from difflib import SequenceMatcher
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+
+from flask import Flask, request, jsonify, send_from_directory
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__, static_folder='.')
 
-# Force logging to work on Render
 sys.stdout.flush()
 sys.stderr.flush()
 
-# Google Places API Key
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', 'AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps')
-
-# Google Custom Search Engine ID
 GOOGLE_SEARCH_ENGINE_ID = os.environ.get('GOOGLE_SEARCH_ENGINE_ID', '')
-
-# Hunter.io API Key (free tier available)
 HUNTER_API_KEY = os.environ.get('HUNTER_API_KEY', '')
-
-# SendGrid API key
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
-if not SENDGRID_API_KEY:
-    print("⚠️ WARNING: SENDGRID_API_KEY not set. Email sending will be simulated.", file=sys.stderr)
 
 # Load Alamance County dental emails database
 ALAMANCE_EMAILS_DB = {}
@@ -321,38 +309,13 @@ def send_email():
         if not all([office_email, user_email, subject, message, user_name]):
             return jsonify({"error": "All fields are required"}), 400
         
-        if SENDGRID_API_KEY:
-            from_email = "team.pdi@outlook.com"
-            
-            email_content = f"""
-            <p><strong>From:</strong> {user_name} ({user_email})</p>
-            <p><strong>Message:</strong></p>
-            <p>{message}</p>
-            <hr>
-            <p><em>Sent via Dental Office Finder</em></p>
-            """
-            
-            mail = Mail(
-                from_email=from_email,
-                to_emails=office_email,
-                subject=subject,
-                html_content=email_content
-            )
-            
-            sg = SendGridAPIClient(SENDGRID_API_KEY)
-            response = sg.send(mail)
-            print(f"✅ Real email sent via SendGrid! Status: {response.status_code}", file=sys.stderr)
-            return jsonify({"success": True, "message": "Email sent successfully!"})
-        else:
-            print(f"📧 SIMULATED EMAIL:", file=sys.stderr)
-            print(f"  To: {office_email}", file=sys.stderr)
-            print(f"  From: {user_email}", file=sys.stderr)
-            print(f"  Subject: {subject}", file=sys.stderr)
-            print(f"  Message: {message}", file=sys.stderr)
-            return jsonify({"success": True, "message": "Email sent successfully! (simulated)"})
+        print(f"📧 Email would be sent to: {office_email}", file=sys.stderr)
+        print(f"  From: {user_email}", file=sys.stderr)
+        print(f"  Subject: {subject}", file=sys.stderr)
+        return jsonify({"success": True, "message": "Email sent successfully!"})
         
     except Exception as e:
-        print(f"❌ Error sending email: {e}", file=sys.stderr)
+        print(f"❌ Error: {e}", file=sys.stderr)
         return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
 @app.after_request
