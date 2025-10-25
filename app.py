@@ -1,4 +1,4 @@
-# v2.0 - Multi-scraper Email Finder with BeautifulSoup, Playwright, Selenium, Scrapy
+# v2.0 - Multi-scraper Email Finder with BeautifulSoup, Selenium, Scrapy
 import os
 import sys
 import re
@@ -65,30 +65,6 @@ def find_email_via_beautifulsoup(website):
             
     except Exception as e:
         print(f"[BeautifulSoup] Error: {str(e)}", file=sys.stderr)
-    
-    return None
-
-def find_email_via_playwright(website):
-    """Try to find email using Playwright (Handles JavaScript)"""
-    try:
-        print(f"[Playwright] Attempting to render: {website}", file=sys.stderr)
-        from playwright.sync_api import sync_playwright
-        
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page()
-            page.goto(website, timeout=15000)
-            page.wait_for_load_state('networkidle', timeout=10000)
-            
-            content = page.content()
-            browser.close()
-            
-            emails = extract_emails_from_text(content)
-            if emails:
-                print(f"[Playwright] Found email: {emails[0]}", file=sys.stderr)
-                return emails[0]
-    except Exception as e:
-        print(f"[Playwright] Error: {str(e)}", file=sys.stderr)
     
     return None
 
@@ -292,27 +268,23 @@ def find_email():
             # 1. BeautifulSoup (Best for static/contact pages)
             email = find_email_via_beautifulsoup(website)
             
-            # 2. Playwright (JavaScript rendering)
-            if not email:
-                email = find_email_via_playwright(website)
-            
-            # 3. Selenium (Browser automation)
+            # 2. Selenium (Browser automation)
             if not email:
                 email = find_email_via_selenium(website)
             
-            # 4. Scrapy (Framework approach)
+            # 3. Scrapy (Framework approach)
             if not email:
                 email = find_email_via_scrapy(website)
             
-            # 5. Regex (Final fallback on website)
+            # 4. Regex (Final fallback on website)
             if not email:
                 email = find_email_via_regex(website)
         
-        # 7. Google Search API
+        # 5. Google Search API
         if not email:
             email = find_email_via_google_search(office_name_found, location)
         
-        # 8. Hunter.io
+        # 6. Hunter.io
         if not email and website:
             try:
                 domain = website.replace('http://', '').replace('https://', '').split('/')[0]
