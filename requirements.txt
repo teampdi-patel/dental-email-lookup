@@ -4,6 +4,5 @@ requests==2.32.5
 python-dotenv==1.1.1
 beautifulsoup4==4.14.2
 playwright==1.40.0
-pyppeteer==1.0.2
 selenium==4.15.2
 scrapy==2.11.0
