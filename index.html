@@ -245,7 +245,7 @@
         </footer>
     </div>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps&libraries=places"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps&libraries=places&v=3.54"></script>
     <script>
         const searchInput = document.getElementById('searchInput');
         const autocompleteList = document.getElementById('autocompleteList');
@@ -253,90 +253,39 @@
         const loading = document.getElementById('loading');
         const noResults = document.getElementById('noResults');
         
-        let autocompleteService;
-        let placesService;
-        let selectedPlace = null;
+        let autocomplete;
         let selectedIndex = -1;
         
-        // Initialize Google Places services
+        // Initialize Google Places autocomplete
         function initServices() {
-            autocompleteService = new google.maps.places.AutocompleteService();
-            placesService = new google.maps.places.PlacesService(document.createElement('div'));
+            autocomplete = new google.maps.places.Autocomplete(searchInput, {
+                types: ['establishment'],
+                componentRestrictions: { country: 'us' },
+                fields: ['place_id', 'name', 'formatted_address', 'formatted_phone_number', 'website']
+            });
+            
+            autocomplete.addListener('place_changed', onPlaceChanged);
         }
         
-        // Handle search input
-        searchInput.addEventListener('input', function() {
-            const query = this.value.trim();
+        function onPlaceChanged() {
+            const place = autocomplete.getPlace();
             
-            if (query.length < 2) {
-                autocompleteList.classList.remove('active');
-                results.classList.remove('active');
-                noResults.style.display = 'none';
+            if (!place.place_id) {
+                console.log('No place selected');
                 return;
             }
             
-            // Search for dental offices
-            autocompleteService.getPlacePredictions({
-                input: query + ' dental office',
-                types: ['establishment'],
-                componentRestrictions: { country: 'us' }
-            }, function(predictions, status) {
-                if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-                    displayAutocomplete(predictions);
-                } else {
-                    autocompleteList.innerHTML = '<div class="autocomplete-item">No results found</div>';
-                    autocompleteList.classList.add('active');
-                }
-            });
-            
-            selectedIndex = -1;
-        });
-        
-        function displayAutocomplete(predictions) {
-            autocompleteList.innerHTML = '';
-            predictions.slice(0, 8).forEach((prediction, index) => {
-                const item = document.createElement('div');
-                item.className = 'autocomplete-item';
-                item.innerHTML = `
-                    <strong>${prediction.main_text}</strong>
-                    <div style="font-size: 0.85rem; color: #999;">${prediction.secondary_text || ''}</div>
-                `;
-                item.addEventListener('click', () => selectPlace(prediction));
-                autocompleteList.appendChild(item);
-            });
-            autocompleteList.classList.add('active');
-        }
-        
-        function selectPlace(prediction) {
-            selectedPlace = prediction;
-            searchInput.value = prediction.main_text;
             autocompleteList.classList.remove('active');
-            
-            // Get detailed place info
             loading.style.display = 'block';
             results.classList.remove('active');
             noResults.style.display = 'none';
             
-            placesService.getDetails({
-                placeId: prediction.place_id,
-                fields: ['name', 'formatted_address', 'formatted_phone_number', 'website']
-            }, function(place, status) {
-                loading.style.display = 'none';
-                
-                if (status === google.maps.places.PlacesServiceStatus.OK) {
-                    // Get email from backend
-                    findEmail(place);
-                } else {
-                    noResults.style.display = 'block';
-                }
-            });
+            findEmail(place);
         }
         
         function findEmail(placeInfo) {
             const officeName = placeInfo.name;
             const location = placeInfo.formatted_address ? placeInfo.formatted_address.split(',').slice(-2).join(',').trim() : 'USA';
-            
-            loading.style.display = 'block';
             
             fetch('/api/find-email', {
                 method: 'POST',
@@ -373,39 +322,8 @@
             noResults.style.display = 'none';
         }
         
-        // Keyboard navigation
-        searchInput.addEventListener('keydown', function(e) {
-            const items = autocompleteList.querySelectorAll('.autocomplete-item');
-            
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                updateSelection(items);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedIndex = Math.max(selectedIndex - 1, -1);
-                updateSelection(items);
-            } else if (e.key === 'Enter' && selectedIndex >= 0) {
-                e.preventDefault();
-                items[selectedIndex].click();
-            }
-        });
-        
-        function updateSelection(items) {
-            items.forEach((item, index) => {
-                item.classList.toggle('selected', index === selectedIndex);
-            });
-        }
-        
         // Initialize when page loads
         window.addEventListener('load', initServices);
-        
-        // Close autocomplete when clicking outside
-        document.addEventListener('click', function(e) {
-            if (e.target !== searchInput && e.target !== autocompleteList) {
-                autocompleteList.classList.remove('active');
-            }
-        });
     </script>
 </body>
 </html>
