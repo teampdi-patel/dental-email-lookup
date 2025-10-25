@@ -47,6 +47,7 @@ from difflib import SequenceMatcher
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from dotenv import load_dotenv
+
 load_dotenv()
 
 app = Flask(__name__, static_folder='.')
