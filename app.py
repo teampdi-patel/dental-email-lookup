@@ -1,13 +1,12 @@
-# v1.0 - Dental Email Finder
+# v2.0 - Multi-scraper Email Finder with BeautifulSoup, Playwright, Pyppeteer, Selenium, Scrapy
 import os
 import sys
 import re
 import time
-import csv
-from difflib import SequenceMatcher
 from flask import Flask, request, jsonify, send_from_directory
 import requests
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
@@ -20,71 +19,179 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
 GOOGLE_SEARCH_ENGINE_ID = os.environ.get('GOOGLE_SEARCH_ENGINE_ID', '')
 HUNTER_API_KEY = os.environ.get('HUNTER_API_KEY', '')
 
-# Load Alamance County dental emails database
-ALAMANCE_EMAILS_DB = {}
-try:
-    with open('alamance_dental_emails.csv', 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            office_name = row['office_name'].lower().strip()
-            email = row['email'].strip()
-            if office_name not in ALAMANCE_EMAILS_DB:
-                ALAMANCE_EMAILS_DB[office_name] = []
-            ALAMANCE_EMAILS_DB[office_name].append(email)
-    print(f"Loaded {len(ALAMANCE_EMAILS_DB)} offices from Alamance County database", file=sys.stderr)
-except FileNotFoundError:
-    print("⚠️ alamance_dental_emails.csv not found", file=sys.stderr)
-except Exception as e:
-    print(f"Error loading CSV: {e}", file=sys.stderr)
-
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
 
-def find_email_via_database(office_name):
-    """Try to find email from Alamance County database using fuzzy matching"""
+def extract_emails_from_text(text):
+    """Extract email addresses from text using regex"""
+    email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    emails = re.findall(email_pattern, text)
+    
+    skip_domains = ['google.com', 'facebook.com', 'yelp.com', 'healthgrades.com', 'gmail.com', 'yahoo.com']
+    valid_emails = [e for e in emails if not any(domain in e.lower() for domain in skip_domains)]
+    
+    # Filter out obvious fake emails
+    valid_emails = [e for e in valid_emails if not any(ext in e.lower() for ext in ['.png', '.jpg', '.gif', '.svg', '.webp', '.jpeg', '.css', '.js'])]
+    
+    # Prioritize real emails
+    real_emails = [e for e in valid_emails if not any(bad in e.lower() for bad in ['asset', 'icon', 'image', 'img', '3x', '2x', '1x'])]
+    
+    return real_emails if real_emails else valid_emails
+
+def find_email_via_beautifulsoup(website):
+    """Try to find email using BeautifulSoup (Best for contact pages)"""
     try:
-        office_name_lower = office_name.lower().strip()
-        print(f"Searching database for: {office_name_lower}", file=sys.stderr)
+        print(f"[BeautifulSoup] Attempting to parse: {website}", file=sys.stderr)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(website, headers=headers, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Exact match first
-        if office_name_lower in ALAMANCE_EMAILS_DB:
-            email = ALAMANCE_EMAILS_DB[office_name_lower][0]
-            print(f"Found email in database (exact match): {email}", file=sys.stderr)
-            return email
+        # Look for mailto links first (most reliable)
+        mailto_links = soup.find_all('a', href=re.compile(r'^mailto:'))
+        if mailto_links:
+            emails = [link['href'].replace('mailto:', '').split('?')[0] for link in mailto_links]
+            emails = [e.strip() for e in emails if e.strip()]
+            if emails:
+                print(f"[BeautifulSoup] Found email via mailto: {emails[0]}", file=sys.stderr)
+                return emails[0]
         
-        # Fuzzy match - find the closest match
-        best_match = None
-        best_score = 0
-        threshold = 0.6
-        
-        for db_office in ALAMANCE_EMAILS_DB.keys():
-            ratio = SequenceMatcher(None, office_name_lower, db_office).ratio()
-            
-            if ratio > best_score:
-                best_score = ratio
-                best_match = db_office
-        
-        if best_match and best_score >= threshold:
-            email = ALAMANCE_EMAILS_DB[best_match][0]
-            print(f"Found email in database (fuzzy match '{best_match}' with {best_score*100:.0f}% similarity): {email}", file=sys.stderr)
-            return email
-        else:
-            print(f"No database match found. Best match was '{best_match}' with {best_score*100:.0f}% similarity (threshold: {threshold*100:.0f}%)", file=sys.stderr)
+        # Search all text for emails
+        text = soup.get_text()
+        emails = extract_emails_from_text(text)
+        if emails:
+            print(f"[BeautifulSoup] Found email: {emails[0]}", file=sys.stderr)
+            return emails[0]
             
     except Exception as e:
-        print(f"Database lookup error: {str(e)}", file=sys.stderr)
+        print(f"[BeautifulSoup] Error: {str(e)}", file=sys.stderr)
+    
+    return None
+
+def find_email_via_playwright(website):
+    """Try to find email using Playwright (Handles JavaScript)"""
+    try:
+        print(f"[Playwright] Attempting to render: {website}", file=sys.stderr)
+        from playwright.sync_api import sync_playwright
+        
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(website, timeout=15000)
+            page.wait_for_load_state('networkidle', timeout=10000)
+            
+            content = page.content()
+            browser.close()
+            
+            emails = extract_emails_from_text(content)
+            if emails:
+                print(f"[Playwright] Found email: {emails[0]}", file=sys.stderr)
+                return emails[0]
+    except Exception as e:
+        print(f"[Playwright] Error: {str(e)}", file=sys.stderr)
+    
+    return None
+
+def find_email_via_pyppeteer(website):
+    """Try to find email using Pyppeteer (Node.js-based)"""
+    try:
+        print(f"[Pyppeteer] Attempting to render: {website}", file=sys.stderr)
+        import asyncio
+        from pyppeteer import launch
+        
+        async def scrape():
+            browser = await launch()
+            page = await browser.newPage()
+            await page.goto(website, {'waitUntil': 'networkidle2', 'timeout': 15000})
+            content = await page.content()
+            await browser.close()
+            return content
+        
+        loop = asyncio.new_event_loop()
+        content = loop.run_until_complete(scrape())
+        
+        emails = extract_emails_from_text(content)
+        if emails:
+            print(f"[Pyppeteer] Found email: {emails[0]}", file=sys.stderr)
+            return emails[0]
+    except Exception as e:
+        print(f"[Pyppeteer] Error: {str(e)}", file=sys.stderr)
+    
+    return None
+
+def find_email_via_selenium(website):
+    """Try to find email using Selenium (Browser automation)"""
+    try:
+        print(f"[Selenium] Attempting to render: {website}", file=sys.stderr)
+        from selenium import webdriver
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        
+        driver = webdriver.Chrome(options=options)
+        driver.get(website)
+        
+        WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.TAG_NAME, 'body')))
+        time.sleep(2)
+        
+        content = driver.page_source
+        driver.quit()
+        
+        emails = extract_emails_from_text(content)
+        if emails:
+            print(f"[Selenium] Found email: {emails[0]}", file=sys.stderr)
+            return emails[0]
+    except Exception as e:
+        print(f"[Selenium] Error: {str(e)}", file=sys.stderr)
+    
+    return None
+
+def find_email_via_scrapy(website):
+    """Try to find email using Scrapy (Framework approach)"""
+    try:
+        print(f"[Scrapy] Attempting to scrape: {website}", file=sys.stderr)
+        import scrapy
+        from scrapy.http import HtmlResponse
+        
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(website, headers=headers, timeout=10)
+        
+        html_response = HtmlResponse(url=website, body=response.text.encode('utf-8'))
+        
+        # Look for mailto links
+        mailto_links = html_response.xpath('//a[contains(@href, "mailto:")]/@href').getall()
+        if mailto_links:
+            emails = [link.replace('mailto:', '').split('?')[0] for link in mailto_links]
+            emails = [e.strip() for e in emails if e.strip()]
+            if emails:
+                print(f"[Scrapy] Found email via mailto: {emails[0]}", file=sys.stderr)
+                return emails[0]
+        
+        # Search text
+        text = html_response.xpath('//text()').getall()
+        text = ' '.join(text)
+        emails = extract_emails_from_text(text)
+        if emails:
+            print(f"[Scrapy] Found email: {emails[0]}", file=sys.stderr)
+            return emails[0]
+    except Exception as e:
+        print(f"[Scrapy] Error: {str(e)}", file=sys.stderr)
     
     return None
 
 def find_email_via_google_search(office_name, location):
     """Try to find email using Google Custom Search API"""
     if not GOOGLE_SEARCH_ENGINE_ID:
-        print("Google Search Engine ID not configured", file=sys.stderr)
+        print("[Google Search] Engine ID not configured", file=sys.stderr)
         return None
     
     try:
-        print(f"Attempting Google Search for: {office_name} {location}", file=sys.stderr)
+        print(f"[Google Search] Searching for: {office_name} {location}", file=sys.stderr)
         url = "https://www.googleapis.com/customsearch/v1"
         params = {
             'q': f"{office_name} {location} email contact",
@@ -96,29 +203,19 @@ def find_email_via_google_search(office_name, location):
         results = response.json()
         
         if 'items' not in results:
-            print("No search results found", file=sys.stderr)
+            print("[Google Search] No results found", file=sys.stderr)
             return None
         
         for item in results.get('items', []):
-            snippet = item.get('snippet', '')
-            title = item.get('title', '')
-            
-            email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-            emails = re.findall(email_pattern, snippet + ' ' + title)
-            
+            snippet = item.get('snippet', '') + ' ' + item.get('title', '')
+            emails = extract_emails_from_text(snippet)
             if emails:
-                skip_domains = ['google.com', 'facebook.com', 'yelp.com', 'healthgrades.com', 'gmail.com', 'yahoo.com']
-                valid_emails = [e for e in emails if not any(domain in e.lower() for domain in skip_domains)]
-                
-                if valid_emails:
-                    email = valid_emails[0]
-                    print(f"Found email via Google Search: {email}", file=sys.stderr)
-                    return email
+                print(f"[Google Search] Found email: {emails[0]}", file=sys.stderr)
+                return emails[0]
         
-        print("No valid emails found in search results", file=sys.stderr)
-        
+        print("[Google Search] No valid emails in results", file=sys.stderr)
     except Exception as e:
-        print(f"Google Search error: {str(e)}", file=sys.stderr)
+        print(f"[Google Search] Error: {str(e)}", file=sys.stderr)
     
     return None
 
@@ -128,7 +225,7 @@ def find_email_via_hunter(domain, office_name):
         return None
     
     try:
-        print(f"Attempting Hunter.io lookup for domain: {domain}", file=sys.stderr)
+        print(f"[Hunter.io] Looking up: {domain}", file=sys.stderr)
         url = "https://api.hunter.io/v2/email-finder"
         params = {
             'domain': domain,
@@ -140,52 +237,25 @@ def find_email_via_hunter(domain, office_name):
         
         if data.get('data') and data['data'].get('email'):
             email = data['data']['email']
-            print(f"Found email via Hunter.io: {email}", file=sys.stderr)
+            print(f"[Hunter.io] Found email: {email}", file=sys.stderr)
             return email
     except Exception as e:
-        print(f"Hunter.io lookup failed: {str(e)}", file=sys.stderr)
+        print(f"[Hunter.io] Error: {str(e)}", file=sys.stderr)
     
     return None
 
-def find_email_via_website(website):
-    """Try to scrape email from website"""
+def find_email_via_regex(website):
+    """Final fallback: Use regex on raw website content"""
     try:
-        print(f"Attempting to scrape website: {website}", file=sys.stderr)
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        website_response = requests.get(website, headers=headers, timeout=15)
-        website_content = website_response.text
-        print(f"Successfully fetched website, content length: {len(website_content)}", file=sys.stderr)
-        
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        emails = re.findall(email_pattern, website_content)
-        print(f"Found {len(emails)} email addresses on website", file=sys.stderr)
-        
-        skip_domains = ['google.com', 'facebook.com', 'yelp.com', 'healthgrades.com', 'gmail.com', 'yahoo.com']
-        valid_emails = [e for e in emails if not any(domain in e.lower() for domain in skip_domains)]
-        print(f"After filtering: {len(valid_emails)} valid emails: {valid_emails}", file=sys.stderr)
-        
-        mailto_pattern = r'href\s*=\s*["\']mailto:([^"\']+)["\']'
-        mailto_emails = re.findall(mailto_pattern, website_content)
-        print(f"Found {len(mailto_emails)} mailto links", file=sys.stderr)
-        valid_emails.extend([e for e in mailto_emails if not any(domain in e.lower() for domain in ['google.com', 'facebook.com'])])
-        
-        valid_emails = list(set(valid_emails))
-        print(f"Total unique emails: {valid_emails}", file=sys.stderr)
-        
-        if valid_emails:
-            email = valid_emails[0]
-            specific_emails = [e for e in valid_emails if any(p in e.lower() for p in ['contact', 'info', 'hello', 'office', 'admin'])]
-            if specific_emails:
-                email = specific_emails[0]
-                print(f"Selected specific email: {email}", file=sys.stderr)
-            else:
-                print(f"Using first email found: {email}", file=sys.stderr)
-            return email
-                    
+        print(f"[Regex] Final attempt on: {website}", file=sys.stderr)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(website, headers=headers, timeout=10)
+        emails = extract_emails_from_text(response.text)
+        if emails:
+            print(f"[Regex] Found email: {emails[0]}", file=sys.stderr)
+            return emails[0]
     except Exception as e:
-        print(f"Error scraping {website}: {str(e)}", file=sys.stderr)
+        print(f"[Regex] Error: {str(e)}", file=sys.stderr)
     
     return None
 
@@ -202,9 +272,9 @@ def find_email():
         print(f"[DEBUG] Received request - Office: {office_name}, Location: {location}", file=sys.stderr)
         
         if not location or not office_name:
-            print(f"[DEBUG] Missing location or office_name", file=sys.stderr)
             return jsonify({"error": "Location and office name are required"}), 400
         
+        # Get office details from Google Places
         search_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
         params = {
             'query': f"{office_name} dental office {location}",
@@ -215,10 +285,7 @@ def find_email():
         response = requests.get(search_url, params=params)
         result = response.json()
         
-        if result.get('status') != 'OK':
-            return jsonify({"error": "No results found or API error"}), 404
-        
-        if len(result.get('results', [])) == 0:
+        if result.get('status') != 'OK' or len(result.get('results', [])) == 0:
             return jsonify({"error": "No dental offices found"}), 404
         
         place = result['results'][0]
@@ -238,7 +305,6 @@ def find_email():
             return jsonify({"error": "Could not get details for this place"}), 404
         
         place_details = details.get('result', {})
-        
         office_name_found = place_details.get('name', office_name)
         address = place_details.get('formatted_address', 'Address not available')
         phone = place_details.get('formatted_phone_number', 'Phone not available')
@@ -248,34 +314,49 @@ def find_email():
         
         email = None
         
-        # Try website scraping first (fastest when it works)
+        # SCRAPING PRIORITY ORDER
         if website:
-            email = find_email_via_website(website)
+            # 1. BeautifulSoup (Best for static/contact pages)
+            email = find_email_via_beautifulsoup(website)
+            
+            # 2. Playwright (JavaScript rendering)
+            if not email:
+                email = find_email_via_playwright(website)
+            
+            # 3. Pyppeteer (Node.js alternative)
+            if not email:
+                email = find_email_via_pyppeteer(website)
+            
+            # 4. Selenium (Browser automation)
+            if not email:
+                email = find_email_via_selenium(website)
+            
+            # 5. Scrapy (Framework approach)
+            if not email:
+                email = find_email_via_scrapy(website)
+            
+            # 6. Regex (Final fallback on website)
+            if not email:
+                email = find_email_via_regex(website)
         
-        # Try Google Search if website scraping failed
+        # 7. Google Search API
         if not email:
             email = find_email_via_google_search(office_name_found, location)
         
-        # Try Hunter.io if still not found
-        if not email:
-            if website:
-                try:
-                    domain = website.replace('http://', '').replace('https://', '').split('/')[0]
-                    email = find_email_via_hunter(domain, office_name_found)
-                except Exception as e:
-                    print(f"Error extracting domain: {str(e)}", file=sys.stderr)
-            
-            # Try Hunter.io with office name if domain extraction failed
-            if not email:
-                email = find_email_via_hunter(office_name_found.replace(' ', ''), office_name_found)
+        # 8. Hunter.io
+        if not email and website:
+            try:
+                domain = website.replace('http://', '').replace('https://', '').split('/')[0]
+                email = find_email_via_hunter(domain, office_name_found)
+            except Exception as e:
+                print(f"[Hunter.io] Domain extraction error: {str(e)}", file=sys.stderr)
         
-        # Try database lookup last (CSV fallback)
         if not email:
-            email = find_email_via_database(office_name_found)
+            email = find_email_via_hunter(office_name_found.replace(' ', ''), office_name_found)
         
-        # Final fallback: return null
+        # 9. Return null if nothing found
         if not email:
-            print(f"No email found from any source, returning null", file=sys.stderr)
+            print(f"[DEBUG] No email found from any source", file=sys.stderr)
             email = None
         
         return jsonify({
@@ -288,7 +369,7 @@ def find_email():
         })
         
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        print(f"[ERROR] {e}", file=sys.stderr)
         return jsonify({"error": "An error occurred while searching"}), 500
 
 @app.route('/api/send-email', methods=['POST', 'OPTIONS'])
@@ -326,4 +407,3 @@ def after_request(response):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
