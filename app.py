@@ -42,7 +42,6 @@ import re
 import time
 import csv
 from difflib import SequenceMatcher
-
 from flask import Flask, request, jsonify, send_from_directory
 import requests
 from dotenv import load_dotenv
@@ -54,7 +53,7 @@ app = Flask(__name__, static_folder='.')
 sys.stdout.flush()
 sys.stderr.flush()
 
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', 'AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps')
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '')
 GOOGLE_SEARCH_ENGINE_ID = os.environ.get('GOOGLE_SEARCH_ENGINE_ID', '')
 HUNTER_API_KEY = os.environ.get('HUNTER_API_KEY', '')
 
