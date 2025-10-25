@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 import requests
 import re
-from bs4 import BeautifulSoup
 import time
 import os
 from sendgrid import SendGridAPIClient
