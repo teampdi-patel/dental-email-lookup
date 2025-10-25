@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS  # <-- ADD THIS
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -11,9 +10,8 @@ from dotenv import load_dotenv
 load_dotenv()  # Load variables from .env file
 
 app = Flask(__name__, static_folder='.')
-CORS(app, origins=["*"])  # <-- ADD THIS (allows all domains for testing)
 
-# Google Places API Key (hardcoded — safe for now)
+# Google Places API Key - use environment variable, fallback to hardcoded
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
 # Get SendGrid API key from environment variable — NEVER hardcode it!
@@ -25,8 +23,12 @@ if not SENDGRID_API_KEY:
 def index():
     return send_from_directory('.', 'index.html')
 
-@app.route('/api/find-email', methods=['POST'])
+@app.route('/api/find-email', methods=['POST', 'OPTIONS'])
 def find_email():
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         data = request.json
         location = data.get('location', '')
@@ -104,9 +106,10 @@ def find_email():
                         
             except Exception as e:
                 print(f"Error scraping {website}: {e}")
-                email = office_name_found.lower().replace(' ', '') + '@' + location.lower().replace(' ', '').replace(',', '') + '.com'
-        else:
-            email = office_name_found.lower().replace(' ', '') + '@example.com'
+                email = None
+        
+        if not email:
+            email = None
         
         return jsonify({
             "name": office_name_found,
@@ -121,8 +124,12 @@ def find_email():
         print(f"Error: {e}")
         return jsonify({"error": "An error occurred while searching"}), 500
 
-@app.route('/api/send-email', methods=['POST'])
+@app.route('/api/send-email', methods=['POST', 'OPTIONS'])
 def send_email():
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         data = request.json
         office_email = data.get('office_email')
@@ -171,7 +178,13 @@ def send_email():
         print(f"❌ Error sending email: {e}")
         return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+    return response
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)  # <-- ADD THIS (production mode)
-
+    app.run(host='0.0.0.0', port=port, debug=False)
