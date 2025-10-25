@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -8,19 +7,19 @@ import os
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv()  # Load variables from .env file
 
 app = Flask(__name__, static_folder='.')
+from flask_cors import CORS
 CORS(app, origins=["*"])
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
 
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+# Google Places API Key (you can keep this hardcoded if it's restricted to your domain)
+GOOGLE_API_KEY = "AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps"
+
+# Get SendGrid API key from environment variable — NEVER hardcode it!
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+if not SENDGRID_API_KEY:
+    print("⚠️ WARNING: SENDGRID_API_KEY not set. Email sending will be simulated.")
 
 @app.route('/')
 def index():
@@ -135,8 +134,10 @@ def send_email():
         if not all([office_email, user_email, subject, message, user_name]):
             return jsonify({"error": "All fields are required"}), 400
         
+        # 🔐 Use SendGrid if key is available
         if SENDGRID_API_KEY:
-            from_email = "team.pdi@outlook.com"
+            # ⚠️ Replace 'no-reply@yourdomain.com' with a verified sender in SendGrid
+            from_email = "team.pdi@outlook.com"  # MUST be verified in SendGrid
             
             email_content = f"""
             <p><strong>From:</strong> {user_name} ({user_email})</p>
@@ -158,6 +159,7 @@ def send_email():
             print(f"✅ Real email sent via SendGrid! Status: {response.status_code}")
             return jsonify({"success": True, "message": "Email sent successfully!"})
         else:
+            # 🧪 Simulate email sending (for testing without API key)
             print(f"📧 SIMULATED EMAIL:")
             print(f"  To: {office_email}")
             print(f"  From: {user_email}")
@@ -170,7 +172,4 @@ def send_email():
         return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
-
-
+    app.run(debug=True, port=5000)
