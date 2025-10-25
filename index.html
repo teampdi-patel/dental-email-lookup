@@ -281,6 +281,11 @@
             noResults.style.display = 'none';
             
             findEmail(place);
+            
+            // Clear search box after selection for new search
+            setTimeout(() => {
+                searchInput.value = '';
+            }, 100);
         }
         
         function findEmail(placeInfo) {
@@ -320,6 +325,12 @@
             
             results.classList.add('active');
             noResults.style.display = 'none';
+            
+            // Reset autocomplete for next search
+            searchInput.value = '';
+            if (autocomplete) {
+                autocomplete.setComponentRestrictions({ country: 'us' });
+            }
         }
         
         // Initialize when page loads
