@@ -12,6 +12,12 @@ load_dotenv()
 
 app = Flask(__name__, static_folder='.')
 CORS(app, origins=["*"])
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
@@ -166,4 +172,5 @@ def send_email():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
