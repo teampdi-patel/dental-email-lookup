@@ -79,37 +79,42 @@ def find_email():
         email = None
         if website:
             try:
-                time.sleep(1)
+                print(f"Attempting to scrape website: {website}")
                 headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                 }
-                website_response = requests.get(website, headers=headers, timeout=10)
+                website_response = requests.get(website, headers=headers, timeout=15)
                 website_content = website_response.text
+                print(f"Successfully fetched website, content length: {len(website_content)}")
                 
                 email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
                 emails = re.findall(email_pattern, website_content)
+                print(f"Found {len(emails)} email addresses on website")
                 
                 skip_domains = ['google.com', 'facebook.com', 'yelp.com', 'healthgrades.com', 'gmail.com', 'yahoo.com']
                 valid_emails = [e for e in emails if not any(domain in e.lower() for domain in skip_domains)]
+                print(f"After filtering: {len(valid_emails)} valid emails")
                 
                 mailto_pattern = r'href\s*=\s*["\']mailto:([^"\']+)["\']'
                 mailto_emails = re.findall(mailto_pattern, website_content)
+                print(f"Found {len(mailto_emails)} mailto links")
                 valid_emails.extend([e for e in mailto_emails if not any(domain in e.lower() for domain in ['google.com', 'facebook.com'])])
                 
                 valid_emails = list(set(valid_emails))
+                print(f"Total unique emails: {valid_emails}")
                 
                 if valid_emails:
                     email = valid_emails[0]
                     specific_emails = [e for e in valid_emails if any(p in e.lower() for p in ['contact', 'info', 'hello', 'office', 'admin'])]
                     if specific_emails:
                         email = specific_emails[0]
+                        print(f"Selected specific email: {email}")
+                    else:
+                        print(f"Using first email found: {email}")
                         
             except Exception as e:
-                print(f"Error scraping {website}: {e}")
+                print(f"Error scraping {website}: {str(e)}")
                 email = None
-        
-        if not email:
-            email = None
         
         return jsonify({
             "name": office_name_found,
