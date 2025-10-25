@@ -3,12 +3,17 @@ import requests
 import re
 import time
 import os
+import sys
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from dotenv import load_dotenv
 load_dotenv()  # Load variables from .env file
 
 app = Flask(__name__, static_folder='.')
+
+# Force logging to work on Render
+sys.stdout.flush()
+sys.stderr.flush()
 
 # Google Places API Key - use environment variable, fallback to hardcoded
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', 'AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps')
@@ -78,46 +83,46 @@ def find_email():
         phone = place_details.get('formatted_phone_number', 'Phone not available')
         website = place_details.get('website')
         
-        print(f"[DEBUG] Office: {office_name_found}, Website: {website}")
+        print(f"[DEBUG] Office: {office_name_found}, Website: {website}", file=sys.stderr)
         
         email = None
         if website:
             try:
-                print(f"Attempting to scrape website: {website}")
+                print(f"Attempting to scrape website: {website}", file=sys.stderr)
                 headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                 }
                 website_response = requests.get(website, headers=headers, timeout=15)
                 website_content = website_response.text
-                print(f"Successfully fetched website, content length: {len(website_content)}")
+                print(f"Successfully fetched website, content length: {len(website_content)}", file=sys.stderr)
                 
                 email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
                 emails = re.findall(email_pattern, website_content)
-                print(f"Found {len(emails)} email addresses on website")
+                print(f"Found {len(emails)} email addresses on website", file=sys.stderr)
                 
                 skip_domains = ['google.com', 'facebook.com', 'yelp.com', 'healthgrades.com', 'gmail.com', 'yahoo.com']
                 valid_emails = [e for e in emails if not any(domain in e.lower() for domain in skip_domains)]
-                print(f"After filtering: {len(valid_emails)} valid emails")
+                print(f"After filtering: {len(valid_emails)} valid emails: {valid_emails}", file=sys.stderr)
                 
                 mailto_pattern = r'href\s*=\s*["\']mailto:([^"\']+)["\']'
                 mailto_emails = re.findall(mailto_pattern, website_content)
-                print(f"Found {len(mailto_emails)} mailto links")
+                print(f"Found {len(mailto_emails)} mailto links", file=sys.stderr)
                 valid_emails.extend([e for e in mailto_emails if not any(domain in e.lower() for domain in ['google.com', 'facebook.com'])])
                 
                 valid_emails = list(set(valid_emails))
-                print(f"Total unique emails: {valid_emails}")
+                print(f"Total unique emails: {valid_emails}", file=sys.stderr)
                 
                 if valid_emails:
                     email = valid_emails[0]
                     specific_emails = [e for e in valid_emails if any(p in e.lower() for p in ['contact', 'info', 'hello', 'office', 'admin'])]
                     if specific_emails:
                         email = specific_emails[0]
-                        print(f"Selected specific email: {email}")
+                        print(f"Selected specific email: {email}", file=sys.stderr)
                     else:
-                        print(f"Using first email found: {email}")
+                        print(f"Using first email found: {email}", file=sys.stderr)
                         
             except Exception as e:
-                print(f"Error scraping {website}: {str(e)}")
+                print(f"Error scraping {website}: {str(e)}", file=sys.stderr)
                 email = None
         
         return jsonify({
