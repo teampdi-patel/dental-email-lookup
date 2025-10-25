@@ -4,6 +4,7 @@ import re
 import time
 import os
 import sys
+import csv
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from dotenv import load_dotenv
@@ -25,6 +26,23 @@ HUNTER_API_KEY = os.environ.get('HUNTER_API_KEY', '')
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
 if not SENDGRID_API_KEY:
     print("⚠️ WARNING: SENDGRID_API_KEY not set. Email sending will be simulated.", file=sys.stderr)
+
+# Load Alamance County dental emails database
+ALAMANCE_EMAILS_DB = {}
+try:
+    with open('alamance_dental_emails.csv', 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            office_name = row['office_name'].lower().strip()
+            email = row['email'].strip()
+            if office_name not in ALAMANCE_EMAILS_DB:
+                ALAMANCE_EMAILS_DB[office_name] = []
+            ALAMANCE_EMAILS_DB[office_name].append(email)
+    print(f"Loaded {len(ALAMANCE_EMAILS_DB)} offices from Alamance County database", file=sys.stderr)
+except FileNotFoundError:
+    print("⚠️ alamance_dental_emails.csv not found", file=sys.stderr)
+except Exception as e:
+    print(f"Error loading CSV: {e}", file=sys.stderr)
 
 @app.route('/')
 def index():
