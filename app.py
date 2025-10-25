@@ -1,10 +1,49 @@
-from flask import Flask, request, jsonify, send_from_directory
+def find_email_via_database(office_name):
+    """Try to find email from Alamance County database using fuzzy matching"""
+    try:
+        office_name_lower = office_name.lower().strip()
+        print(f"Searching database for: {office_name_lower}", file=sys.stderr)
+        
+        # Exact match first
+        if office_name_lower in ALAMANCE_EMAILS_DB:
+            email = ALAMANCE_EMAILS_DB[office_name_lower][0]
+            print(f"Found email in database (exact match): {email}", file=sys.stderr)
+            return email
+        
+        # Fuzzy match - find the closest match
+        best_match = None
+        best_score = 0
+        threshold = 0.6  # Require at least 60% similarity
+        
+        for db_office in ALAMANCE_EMAILS_DB.keys():
+            # Calculate similarity ratio (0 to 1)
+            ratio = SequenceMatcher(None, office_name_lower, db_office).ratio()
+            
+            if ratio > best_score:
+                best_score = ratio
+                best_match = db_office
+        
+        # If we found a good match (>60% similar), use it
+        if best_match and best_score >= threshold:
+            email = ALAMANCE_EMAILS_DB[best_match][0]
+            print(f"Found email in database (fuzzy match '{best_match}' with {best_score*100:.0f}% similarity): {email}", file=sys.stderr)
+            return email
+        else:
+            print(f"No database match found. Best match was '{best_match}' with {best_score*100:.0f}% similarity (threshold: {threshold*100:.0f}%)", file=sys.stderr)
+            
+    except Exception as e:
+        print(f"Database lookup error: {str(e)}", file=sys.stderr)
+    
+    return None
+
+def find_email_via_website(website):from flask import Flask, request, jsonify, send_from_directory
 import requests
 import re
 import time
 import os
 import sys
 import csv
+from difflib import SequenceMatcher
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from dotenv import load_dotenv
@@ -18,6 +57,9 @@ sys.stderr.flush()
 
 # Google Places API Key
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', 'AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps')
+
+# Google Custom Search Engine ID
+GOOGLE_SEARCH_ENGINE_ID = os.environ.get('GOOGLE_SEARCH_ENGINE_ID', '')
 
 # Hunter.io API Key (free tier available)
 HUNTER_API_KEY = os.environ.get('HUNTER_API_KEY', '')
@@ -48,7 +90,53 @@ except Exception as e:
 def index():
     return send_from_directory('.', 'index.html')
 
-def find_email_via_hunter(domain, office_name):
+def find_email_via_google_search(office_name, location):
+    """Try to find email using Google Custom Search API"""
+    if not GOOGLE_SEARCH_ENGINE_ID:
+        print("Google Search Engine ID not configured", file=sys.stderr)
+        return None
+    
+    try:
+        print(f"Attempting Google Search for: {office_name} {location}", file=sys.stderr)
+        url = "https://www.googleapis.com/customsearch/v1"
+        params = {
+            'q': f"{office_name} {location} email contact",
+            'cx': GOOGLE_SEARCH_ENGINE_ID,
+            'key': GOOGLE_API_KEY
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        results = response.json()
+        
+        if 'items' not in results:
+            print("No search results found", file=sys.stderr)
+            return None
+        
+        # Search through results for email addresses
+        for item in results.get('items', []):
+            snippet = item.get('snippet', '')
+            title = item.get('title', '')
+            
+            # Look for email pattern in snippet and title
+            email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+            emails = re.findall(email_pattern, snippet + ' ' + title)
+            
+            if emails:
+                # Filter out common non-office emails
+                skip_domains = ['google.com', 'facebook.com', 'yelp.com', 'healthgrades.com', 'gmail.com', 'yahoo.com']
+                valid_emails = [e for e in emails if not any(domain in e.lower() for domain in skip_domains)]
+                
+                if valid_emails:
+                    email = valid_emails[0]
+                    print(f"Found email via Google Search: {email}", file=sys.stderr)
+                    return email
+        
+        print("No valid emails found in search results", file=sys.stderr)
+        
+    except Exception as e:
+        print(f"Google Search error: {str(e)}", file=sys.stderr)
+    
+    return None
     """Try to find email using Hunter.io API"""
     if not HUNTER_API_KEY:
         return None
@@ -73,7 +161,7 @@ def find_email_via_hunter(domain, office_name):
     
     return None
 
-def find_email_via_website(website):
+def find_email_via_database(office_name):
     """Try to scrape email from website"""
     try:
         print(f"Attempting to scrape website: {website}", file=sys.stderr)
@@ -174,11 +262,18 @@ def find_email():
         
         email = None
         
-        # Try to find email via website scraping first
-        if website:
+        # Try database lookup first (fastest)
+        email = find_email_via_database(office_name_found)
+        
+        # Try website scraping if not found in database
+        if not email and website:
             email = find_email_via_website(website)
         
-        # If website scraping failed, try Hunter.io
+        # Try Google Search if still not found
+        if not email:
+            email = find_email_via_google_search(office_name_found, location)
+        
+        # Try Hunter.io if still not found
         if not email and website:
             try:
                 # Extract domain from website URL
