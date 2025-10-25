@@ -16,7 +16,7 @@
         body {
             background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 40px 20px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,176 +24,147 @@
         
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 600px;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
             overflow: hidden;
         }
         
         header {
             background: linear-gradient(120deg, #1a6d8c 0%, #2a9d8f 100%);
             color: white;
-            padding: 30px 40px;
+            padding: 40px 30px;
             text-align: center;
         }
         
         header h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
         
         header p {
-            font-size: 1.1rem;
+            font-size: 1rem;
             opacity: 0.9;
         }
         
         .content {
-            display: flex;
-            flex-wrap: wrap;
-            padding: 30px;
+            padding: 40px 30px;
         }
         
-        .search-section {
-            flex: 1;
-            min-width: 300px;
-            padding: 20px;
-            border-right: 1px solid #eee;
-        }
-        
-        .form-section {
-            flex: 1;
-            min-width: 300px;
-            padding: 20px;
-        }
-        
-        .section-title {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            color: #2a9d8f;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .section-title i {
-            background: #e8f4f8;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #1a6d8c;
-        }
-        
-        .input-group {
+        .search-box-wrapper {
+            position: relative;
             margin-bottom: 20px;
         }
         
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-        
-        input, textarea, select {
+        .search-box {
             width: 100%;
-            padding: 14px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
+            padding: 16px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
             font-size: 16px;
             transition: all 0.3s;
         }
         
-        input:focus, textarea:focus, select:focus {
-            border-color: #2a9d8f;
+        .search-box:focus {
             outline: none;
+            border-color: #2a9d8f;
             box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.2);
         }
         
-        textarea {
-            min-height: 120px;
-            resize: vertical;
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
         
-        .btn {
-            background: linear-gradient(120deg, #1a6d8c 0%, #2a9d8f 100%);
-            color: white;
-            border: none;
-            padding: 14px 25px;
-            font-size: 16px;
-            border-radius: 10px;
+        .autocomplete-list.active {
+            display: block;
+        }
+        
+        .autocomplete-item {
+            padding: 14px 16px;
             cursor: pointer;
-            width: 100%;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
         }
         
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(42, 157, 143, 0.4);
+        .autocomplete-item:hover,
+        .autocomplete-item.selected {
+            background: #f0f8ff;
         }
         
-        .btn:active {
-            transform: translateY(0);
-        }
-        
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
+        .autocomplete-item strong {
+            color: #2a9d8f;
         }
         
         .results {
-            margin-top: 20px;
+            margin-top: 30px;
             padding: 20px;
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 12px;
             border-left: 4px solid #2a9d8f;
             display: none;
         }
         
-        .results h3 {
-            margin-bottom: 15px;
-            color: #1a6d8c;
+        .results.active {
+            display: block;
         }
         
         .office-card {
             background: white;
             border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 20px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border: 1px solid #eee;
         }
         
-        .office-card h4 {
+        .office-card h3 {
             color: #2a9d8f;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            font-size: 1.3rem;
         }
         
-        .office-card p {
-            margin: 5px 0;
+        .office-info {
+            margin: 10px 0;
             color: #555;
-            font-size: 0.95rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
         }
         
-        .email-display {
+        .office-info i {
+            color: #2a9d8f;
+            width: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        
+        .email-box {
             background: #e8f4f8;
-            padding: 10px;
+            padding: 12px;
             border-radius: 8px;
-            margin-top: 10px;
+            margin-top: 15px;
             font-weight: 600;
             color: #1a6d8c;
-            display: flex;
-            align-items: center;
-            gap: 8px;
             word-break: break-all;
+        }
+        
+        .email-box i {
+            margin-right: 8px;
         }
         
         .loading {
@@ -205,8 +176,8 @@
         .loading i {
             font-size: 2rem;
             color: #2a9d8f;
-            margin-bottom: 10px;
             animation: spin 1s linear infinite;
+            margin-bottom: 10px;
         }
         
         @keyframes spin {
@@ -214,253 +185,225 @@
             100% { transform: rotate(360deg); }
         }
         
-        .status {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 8px;
-            display: none;
-        }
-        
-        .status.success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #c8e6c9;
-        }
-        
-        .status.error {
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #ffcdd2;
+        .no-results {
+            text-align: center;
+            color: #999;
+            padding: 20px;
         }
         
         footer {
             text-align: center;
             padding: 20px;
-            color: #666;
-            font-size: 0.9rem;
+            color: #999;
+            font-size: 0.85rem;
             border-top: 1px solid #eee;
-        }
-        
-        @media (max-width: 768px) {
-            .content {
-                flex-direction: column;
-            }
-            
-            .search-section {
-                border-right: none;
-                border-bottom: 1px solid #eee;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-tooth"></i> Dental Office Email Finder</h1>
-            <p>Find dental office emails by searching Google Places and scraping their websites</p>
+            <h1><i class="fas fa-tooth"></i> Dental Email Finder</h1>
+            <p>Search for dental offices and get their contact emails</p>
         </header>
         
         <div class="content">
-            <div class="search-section">
-                <h2 class="section-title"><i class="fas fa-search"></i> Find Dental Office</h2>
-                <div class="input-group">
-                    <label for="location"><i class="fas fa-map-marker-alt"></i> Location</label>
-                    <input type="text" id="location" placeholder="City, State or ZIP code" value="Graham, NC">
-                </div>
-                
-                <div class="input-group">
-                    <label for="office-name"><i class="fas fa-building"></i> Dental Office Name</label>
-                    <input type="text" id="office-name" placeholder="Exact or partial name" value="Patel Dental">
-                </div>
-                
-                <button id="search-btn" class="btn">
-                    <i class="fas fa-search"></i> Find Email Address
-                </button>
-                
-                <div class="loading" id="loading">
-                    <i class="fas fa-spinner"></i>
-                    <p>Searching for dental office email...</p>
-                </div>
-                
-                <div class="results" id="results">
-                    <h3>Found Dental Office</h3>
-                    <div class="office-card" id="office-result">
-                        <h4 id="result-name">-</h4>
-                        <p><i class="fas fa-map-marker-alt"></i> <span id="result-address">-</span></p>
-                        <p><i class="fas fa-phone"></i> <span id="result-phone">-</span></p>
-                        <div class="email-display">
-                            <i class="fas fa-envelope"></i> <span id="result-email">-</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="status" id="search-status"></div>
+            <div class="search-box-wrapper">
+                <input type="text" class="search-box" id="searchInput" placeholder="Start typing office name (e.g., 'patel', 'greeson')...">
+                <div class="autocomplete-list" id="autocompleteList"></div>
             </div>
             
-            <div class="form-section">
-                <h2 class="section-title"><i class="fas fa-envelope"></i> Send Your Message</h2>
-                <form id="contact-form">
-                    <div class="input-group">
-                        <label for="your-name"><i class="fas fa-user"></i> Your Name</label>
-                        <input type="text" id="your-name" value="John Doe" required>
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner"></i>
+                <p>Finding email...</p>
+            </div>
+            
+            <div class="results" id="results">
+                <div class="office-card">
+                    <h3 id="officeName">-</h3>
+                    <div class="office-info">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="officeAddress">-</span>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="your-email"><i class="fas fa-envelope"></i> Your Email</label>
-                        <input type="email" id="your-email" value="john.doe@example.com" required>
+                    <div class="office-info">
+                        <i class="fas fa-phone"></i>
+                        <span id="officePhone">-</span>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="office-email"><i class="fas fa-building"></i> Dental Office Email</label>
-                        <input type="email" id="office-email" placeholder="Will be auto-filled from search" required>
+                    <div class="email-box">
+                        <i class="fas fa-envelope"></i><span id="officeEmail">-</span>
                     </div>
-                    
-                    <div class="input-group">
-                        <label for="subject"><i class="fas fa-tag"></i> Subject</label>
-                        <input type="text" id="subject" value="Appointment Inquiry" required>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="message"><i class="fas fa-comment"></i> Your Message</label>
-                        <textarea id="message" required>Hello,
-
-I'm interested in scheduling an appointment at your dental office. Please let me know your availability for next week.
-
-Thank you</textarea>
-                    </div>
-                    
-                    <button type="submit" class="btn">
-                        <i class="fas fa-paper-plane"></i> Send Message
-                    </button>
-                </form>
-                
-                <div class="status" id="form-status"></div>
+                </div>
+            </div>
+            
+            <div class="no-results" id="noResults" style="display: none;">
+                No results found. Try a different search.
             </div>
         </div>
         
         <footer>
-            <p>Dental Office Email Finder &copy; 2025 | Python Backend + Google Places API</p>
+            <p>Powered by Google Places API | Searches dental offices in real-time</p>
         </footer>
     </div>
 
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps&libraries=places"></script>
     <script>
-        const searchBtn = document.getElementById('search-btn');
-        const loadingEl = document.getElementById('loading');
-        const resultsEl = document.getElementById('results');
-        const officeEmailInput = document.getElementById('office-email');
-        const searchStatus = document.getElementById('search-status');
-        const formStatus = document.getElementById('form-status');
+        const searchInput = document.getElementById('searchInput');
+        const autocompleteList = document.getElementById('autocompleteList');
+        const results = document.getElementById('results');
+        const loading = document.getElementById('loading');
+        const noResults = document.getElementById('noResults');
         
-        function showLoading() {
-            loadingEl.style.display = 'block';
-            resultsEl.style.display = 'none';
-            searchStatus.style.display = 'none';
-            searchBtn.disabled = true;
+        let autocompleteService;
+        let placesService;
+        let selectedPlace = null;
+        let selectedIndex = -1;
+        
+        // Initialize Google Places services
+        function initServices() {
+            autocompleteService = new google.maps.places.AutocompleteService();
+            placesService = new google.maps.places.PlacesService(document.createElement('div'));
         }
         
-        function hideLoading() {
-            loadingEl.style.display = 'none';
-            searchBtn.disabled = false;
-        }
-        
-        function showResults(office) {
-            document.getElementById('result-name').textContent = office.name || '-';
-            document.getElementById('result-address').textContent = office.address || '-';
-            document.getElementById('result-phone').textContent = office.phone || '-';
-            document.getElementById('result-email').textContent = office.email || '-';
-            resultsEl.style.display = 'block';
-            officeEmailInput.value = office.email || '';
-        }
-        
-        function showStatus(element, message, isSuccess) {
-            element.textContent = message;
-            element.className = 'status ' + (isSuccess ? 'success' : 'error');
-            element.style.display = 'block';
-            setTimeout(() => { element.style.display = 'none'; }, 5000);
-        }
-        
-        async function searchDentalOffice() {
-            const location = document.getElementById('location').value;
-            const officeName = document.getElementById('office-name').value;
+        // Handle search input
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
             
-            if (!location.trim() || !officeName.trim()) {
-                showStatus(searchStatus, 'Please enter both location and office name', false);
+            if (query.length < 2) {
+                autocompleteList.classList.remove('active');
+                results.classList.remove('active');
+                noResults.style.display = 'none';
                 return;
             }
             
-            showLoading();
-            
-            try {
-                const response = await fetch('/api/find-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        location: location.trim(), 
-                        office_name: officeName.trim() 
-                    }),
-                });
-                
-                const data = await response.json();
-                hideLoading();
-                
-                console.log('Response:', data);
-                
-                if (data.error) {
-                    showStatus(searchStatus, 'Error: ' + data.error, false);
-                    return;
-                }
-                
-                showResults(data);
-                showStatus(searchStatus, 'Email found successfully!', true);
-                
-            } catch (error) {
-                hideLoading();
-                showStatus(searchStatus, 'Error: ' + error.message, false);
-                console.error('Fetch error:', error);
-            }
-        }
-        
-        searchBtn.addEventListener('click', searchDentalOffice);
-        
-        document.getElementById('contact-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const officeEmail = officeEmailInput.value;
-            if (!officeEmail) {
-                showStatus(formStatus, 'Please find a dental office email first', false);
-                return;
-            }
-            
-            const yourName = document.getElementById('your-name').value;
-            const yourEmail = document.getElementById('your-email').value;
-            const subject = document.getElementById('subject').value;
-            const message = document.getElementById('message').value;
-            
-            try {
-                const response = await fetch('/api/send-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        office_email: officeEmail,
-                        user_email: yourEmail,
-                        subject: subject,
-                        message: message,
-                        user_name: yourName
-                    }),
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showStatus(formStatus, 'Message sent to ' + officeEmail + '!', true);
-                    document.getElementById('contact-form').reset();
+            // Search for dental offices
+            autocompleteService.getPlacePredictions({
+                input: query + ' dental office',
+                types: ['establishment'],
+                componentRestrictions: { country: 'us' }
+            }, function(predictions, status) {
+                if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                    displayAutocomplete(predictions);
                 } else {
-                    showStatus(formStatus, 'Error: ' + (data.error || 'Failed to send message'), false);
+                    autocompleteList.innerHTML = '<div class="autocomplete-item">No results found</div>';
+                    autocompleteList.classList.add('active');
                 }
+            });
+            
+            selectedIndex = -1;
+        });
+        
+        function displayAutocomplete(predictions) {
+            autocompleteList.innerHTML = '';
+            predictions.slice(0, 8).forEach((prediction, index) => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.innerHTML = `
+                    <strong>${prediction.main_text}</strong>
+                    <div style="font-size: 0.85rem; color: #999;">${prediction.secondary_text || ''}</div>
+                `;
+                item.addEventListener('click', () => selectPlace(prediction));
+                autocompleteList.appendChild(item);
+            });
+            autocompleteList.classList.add('active');
+        }
+        
+        function selectPlace(prediction) {
+            selectedPlace = prediction;
+            searchInput.value = prediction.main_text;
+            autocompleteList.classList.remove('active');
+            
+            // Get detailed place info
+            loading.style.display = 'block';
+            results.classList.remove('active');
+            noResults.style.display = 'none';
+            
+            placesService.getDetails({
+                placeId: prediction.place_id,
+                fields: ['name', 'formatted_address', 'formatted_phone_number', 'website']
+            }, function(place, status) {
+                loading.style.display = 'none';
                 
-            } catch (error) {
-                showStatus(formStatus, 'Error: ' + error.message, false);
-                console.error('Send error:', error);
+                if (status === google.maps.places.PlacesServiceStatus.OK) {
+                    // Get email from backend
+                    findEmail(place);
+                } else {
+                    noResults.style.display = 'block';
+                }
+            });
+        }
+        
+        function findEmail(placeInfo) {
+            const officeName = placeInfo.name;
+            const location = placeInfo.formatted_address ? placeInfo.formatted_address.split(',').slice(-2).join(',').trim() : 'USA';
+            
+            loading.style.display = 'block';
+            
+            fetch('/api/find-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    office_name: officeName,
+                    location: location
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                
+                if (data.email) {
+                    displayResults(data);
+                } else {
+                    noResults.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                console.error('Error:', error);
+                noResults.style.display = 'block';
+            });
+        }
+        
+        function displayResults(data) {
+            document.getElementById('officeName').textContent = data.name || '-';
+            document.getElementById('officeAddress').textContent = data.address || '-';
+            document.getElementById('officePhone').textContent = data.phone || '-';
+            document.getElementById('officeEmail').textContent = data.email || '-';
+            
+            results.classList.add('active');
+            noResults.style.display = 'none';
+        }
+        
+        // Keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+            const items = autocompleteList.querySelectorAll('.autocomplete-item');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelection(items);
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            }
+        });
+        
+        function updateSelection(items) {
+            items.forEach((item, index) => {
+                item.classList.toggle('selected', index === selectedIndex);
+            });
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', initServices);
+        
+        // Close autocomplete when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target !== searchInput && e.target !== autocompleteList) {
+                autocompleteList.classList.remove('active');
             }
         });
     </script>
