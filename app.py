@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS  # <-- ADD THIS
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -10,10 +11,9 @@ from dotenv import load_dotenv
 load_dotenv()  # Load variables from .env file
 
 app = Flask(__name__, static_folder='.')
-from flask_cors import CORS
-CORS(app, origins=["*"])
+CORS(app, origins=["*"])  # <-- ADD THIS (allows all domains for testing)
 
-# Google Places API Key (you can keep this hardcoded if it's restricted to your domain)
+# Google Places API Key (hardcoded — safe for now)
 GOOGLE_API_KEY = "AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps"
 
 # Get SendGrid API key from environment variable — NEVER hardcode it!
@@ -172,4 +172,5 @@ def send_email():
         return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)  # <-- ADD THIS (production mode)
