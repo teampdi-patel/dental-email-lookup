@@ -1,4 +1,3 @@
-# v1.0 - Dental Email Finder
 import os
 import sys
 import re
@@ -248,32 +247,34 @@ def find_email():
         
         email = None
         
-        # Try database lookup first (fastest)
-        email = find_email_via_database(office_name_found)
-        
-        # Try website scraping if not found in database
-        if not email and website:
+        # Try website scraping first (fastest when it works)
+        if website:
             email = find_email_via_website(website)
         
-        # Try Google Search if still not found
+        # Try Google Search if website scraping failed
         if not email:
             email = find_email_via_google_search(office_name_found, location)
         
         # Try Hunter.io if still not found
-        if not email and website:
-            try:
-                domain = website.replace('http://', '').replace('https://', '').split('/')[0]
-                email = find_email_via_hunter(domain, office_name_found)
-            except Exception as e:
-                print(f"Error extracting domain: {str(e)}", file=sys.stderr)
-        
-        # If still no email, try Hunter.io with office name
         if not email:
-            email = find_email_via_hunter(office_name_found.replace(' ', ''), office_name_found)
+            if website:
+                try:
+                    domain = website.replace('http://', '').replace('https://', '').split('/')[0]
+                    email = find_email_via_hunter(domain, office_name_found)
+                except Exception as e:
+                    print(f"Error extracting domain: {str(e)}", file=sys.stderr)
+            
+            # Try Hunter.io with office name if domain extraction failed
+            if not email:
+                email = find_email_via_hunter(office_name_found.replace(' ', ''), office_name_found)
         
-        # Last resort: return null
+        # Try database lookup last (CSV fallback)
         if not email:
-            print(f"No email found, returning null", file=sys.stderr)
+            email = find_email_via_database(office_name_found)
+        
+        # Final fallback: return null
+        if not email:
+            print(f"No email found from any source, returning null", file=sys.stderr)
             email = None
         
         return jsonify({
@@ -324,4 +325,3 @@ def after_request(response):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
