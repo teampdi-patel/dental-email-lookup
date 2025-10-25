@@ -12,7 +12,7 @@ load_dotenv()  # Load variables from .env file
 app = Flask(__name__, static_folder='.')
 
 # Google Places API Key - use environment variable, fallback to hardcoded
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', 'AIzaSyDJ4UBCM_dvN0BBdcFJtWlBvnrCZysZ9ps')
 
 # Get SendGrid API key from environment variable — NEVER hardcode it!
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
@@ -34,7 +34,10 @@ def find_email():
         location = data.get('location', '')
         office_name = data.get('office_name', '')
         
+        print(f"[DEBUG] Received request - Office: {office_name}, Location: {location}")
+        
         if not location or not office_name:
+            print(f"[DEBUG] Missing location or office_name")
             return jsonify({"error": "Location and office name are required"}), 400
         
         search_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
@@ -75,6 +78,8 @@ def find_email():
         address = place_details.get('formatted_address', 'Address not available')
         phone = place_details.get('formatted_phone_number', 'Phone not available')
         website = place_details.get('website')
+        
+        print(f"[DEBUG] Office: {office_name_found}, Website: {website}")
         
         email = None
         if website:
